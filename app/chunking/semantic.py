@@ -2,7 +2,7 @@ from math import sqrt
 
 from app.chunking.base import Chunker
 from app.ingestion.metadata import Document, Chunk
-from app.indexing.embeddings import EmbeddingProvider
+from app.embeddings.embedder import EmbeddingProvider
 
 
 class SemanticChunker(Chunker):

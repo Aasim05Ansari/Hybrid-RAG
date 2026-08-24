@@ -2,7 +2,7 @@ from app.chunking.base import Chunker
 from app.chunking.fixed import FixedSizeChunker
 from app.chunking.recursive import RecursiveChunker
 from app.chunking.semantic import SemanticChunker
-from app.indexing.embeddings import EmbeddingProvider
+from app.embeddings.embedder import EmbeddingProvider
 
 
 def get_chunker(

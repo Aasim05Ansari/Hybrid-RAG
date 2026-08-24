@@ -1,4 +1,4 @@
-from app.indexing.embeddings import EmbeddingProvider
+from app.embeddings.embedder import EmbeddingProvider
 
 
 class FakeEmbeddingProvider(EmbeddingProvider):

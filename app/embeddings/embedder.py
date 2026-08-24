@@ -1,7 +1,25 @@
+from abc import ABC, abstractmethod
+
 from openai import OpenAI
 
 from app.config.settings import settings
-from app.indexing.embeddings import EmbeddingProvider
+
+
+class EmbeddingProvider(ABC):
+
+    @abstractmethod
+    def embed_documents(
+        self,
+        texts: list[str],
+    ) -> list[list[float]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def embed_query(
+        self,
+        text: str,
+    ) -> list[float]:
+        raise NotImplementedError
 
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -12,7 +30,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     ):
         if not settings.openai_api_key:
             raise ValueError(
-                "OPENAI_API_KEY is required for OpenAI embeddings"
+                "OPENAI_API_KEY is required "
+                "for OpenAI embeddings"
             )
 
         self.model = model or settings.embedding_model
