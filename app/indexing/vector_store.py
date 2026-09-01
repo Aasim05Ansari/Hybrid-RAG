@@ -1,8 +1,9 @@
 import chromadb
-from app.config.settings import settings
+
 from abc import ABC, abstractmethod
 from typing import Any
 
+from app.config.settings import settings
 
 
 class VectorStore(ABC):
@@ -26,7 +27,8 @@ class VectorStore(ABC):
     ) -> list[dict[str, Any]]:
         """Search for similar documents."""
         raise NotImplementedError
-    
+
+
 class ChromaVectorStore(VectorStore):
 
     def __init__(
@@ -50,7 +52,12 @@ class ChromaVectorStore(VectorStore):
 
         self.collection = (
             self.client.get_or_create_collection(
-                name=self.collection_name
+                name=self.collection_name,
+                configuration={
+                    "hnsw": {
+                        "space": "cosine",
+                    }
+                },
             )
         )
 
@@ -72,8 +79,8 @@ class ChromaVectorStore(VectorStore):
             == len(metadatas)
         ):
             raise ValueError(
-                "ids, embeddings, documents, and "
-                "metadatas must have the same length"
+                "ids, embeddings, and documents, "
+                "and metadatas must have the same length"
             )
 
         self.collection.upsert(
