@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from app.ingestion.loader import (
+    HTMLLoader,
     TextLoader,
     PDFLoader,
     DOCXLoader,
@@ -106,3 +107,73 @@ def test_pdf_loader(tmp_path):
     assert document.metadata["filename"] == "policy.pdf"
     assert document.metadata["file_type"] == ".pdf"
     assert document.metadata["page_count"] == 1
+
+def test_html_loader(tmp_path):
+
+    file_path = tmp_path / "policy.html"
+
+    file_path.write_text(
+        """
+        <html>
+            <head>
+                <title>Employee Policy</title>
+                <style>
+                    body { color: red; }
+                </style>
+            </head>
+
+            <body>
+                <h1>Employee Leave Policy</h1>
+
+                <p>Annual leave is 24 days per year.</p>
+
+                <p>Sick leave is 12 days per year.</p>
+
+                <script>
+                    console.log("This should not appear");
+                </script>
+            </body>
+        </html>
+        """,
+        encoding="utf-8",
+    )
+
+    loader = HTMLLoader()
+
+    document = loader.load(file_path)
+
+    assert (
+        "Employee Leave Policy"
+        in document.content
+    )
+
+    assert (
+        "Annual leave is 24 days per year."
+        in document.content
+    )
+
+    assert (
+        "Sick leave is 12 days per year."
+        in document.content
+    )
+
+    assert (
+        "console.log"
+        not in document.content
+    )
+
+    assert document.metadata["filename"] == "policy.html"
+
+    assert document.metadata["file_type"] == ".html"
+
+
+def test_html_loader_factory():
+
+    loader = get_loader(
+        Path("policy.html")
+    )
+
+    assert isinstance(
+        loader,
+        HTMLLoader,
+    )
