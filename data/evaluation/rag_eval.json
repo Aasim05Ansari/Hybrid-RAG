@@ -1,0 +1,24 @@
+[
+    {
+        "id": "q001",
+        "question": "How many sick leave days can employees take?",
+        "expected_answer": "Employees may take up to 12 days of sick leave.",
+        "expected_sources": [
+            "leave.txt"
+        ],
+        "expected_chunk_ids": [
+            "chunk-001"
+        ]
+    },
+    {
+        "id": "q002",
+        "question": "What is the employee leave policy?",
+        "expected_answer": "Employees can take leave according to the documented leave policy.",
+        "expected_sources": [
+            "leave.txt"
+        ],
+        "expected_chunk_ids": [
+            "chunk-002"
+        ]
+    }
+]
