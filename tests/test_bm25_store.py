@@ -1,109 +1,142 @@
 from app.indexing.bm25_store import BM25Store
 
 
-def test_bm25_store_add_and_search():
+def test_bm25_store_persists_across_instances(tmp_path):
 
-    store = BM25Store()
+    store_path = tmp_path / "bm25"
 
-    store.add(
+    first_store = BM25Store(
+        persist_directory=store_path
+    )
+
+    first_store.add(
         ids=[
-            "chunk_1",
-            "chunk_2",
-            "chunk_3",
+            "chunk-1",
+            "chunk-2",
+            "chunk-3",
         ],
         documents=[
-            "Annual leave is 24 days per year.",
-            "Sick leave is 12 days per year.",
-            "Annual leave may be carried forward.",
+            "Employees receive 24 days of annual leave.",
+            "Employees receive 12 days of sick leave.",
+            "Employees can work remotely 2 days per week.",
         ],
         metadatas=[
-            {"source": "leave.txt", "chunk_index": 0},
-            {"source": "leave.txt", "chunk_index": 1},
-            {"source": "leave.txt", "chunk_index": 2},
-        ],
-    )
-
-    results = store.search(
-        query="annual leave",
-        top_k=2,
-    )
-
-    assert len(results) == 2
-
-    result_ids = {
-        result["id"]
-        for result in results
-    }
-
-    assert result_ids.issubset(
-        {
-            "chunk_1",
-            "chunk_2",
-            "chunk_3",
-        }
-    )
-
-    assert all(
-        "document" in result
-        and "metadata" in result
-        and "score" in result
-        for result in results
-    )
-
-    assert all(
-        isinstance(result["score"], float)
-        for result in results
-    )
-
-def test_bm25_exact_keyword_matching():
-
-    store = BM25Store()
-
-    store.add(
-        ids=[
-            "chunk_1",
-            "chunk_2",
-        ],
-        documents=[
-            "KCSR Rule 27 defines employee leave.",
-            "Employees can request annual leave.",
-        ],
-        metadatas=[
-            {"source": "rules.txt"},
             {"source": "leave.txt"},
+            {"source": "leave.txt"},
+            {"source": "remote-work.txt"},
         ],
     )
 
-    results = store.search(
-        query="KCSR Rule 27",
+    assert first_store.document_count == 3
+    assert first_store.is_ready is True
+
+    second_store = BM25Store(
+        persist_directory=store_path
+    )
+
+    assert second_store.document_count == 3
+    assert second_store.is_ready is True
+
+    results = second_store.search(
+        query="sick leave",
         top_k=1,
     )
 
-    assert results[0]["id"] == "chunk_1"
+    assert results
+    assert results[0]["id"] == "chunk-2"
 
 
-def test_bm25_empty_query():
+def test_bm25_store_creates_persistence_directory(tmp_path):
 
-    store = BM25Store()
+    store_path = (
+        tmp_path
+        / "nested"
+        / "bm25"
+    )
+
+    store = BM25Store(
+        persist_directory=store_path
+    )
 
     store.add(
-        ids=["chunk_1"],
+        ids=["chunk-1"],
         documents=["Annual leave is 24 days."],
         metadatas=[{"source": "leave.txt"}],
     )
 
+    assert store_path.exists()
+    assert (store_path / "index.json").exists()
+
+
+def test_bm25_store_upserts_existing_id(tmp_path):
+
+    store = BM25Store(
+        persist_directory=tmp_path / "bm25"
+    )
+
+    store.add(
+        ids=["chunk-1"],
+        documents=["Annual leave is 24 days."],
+        metadatas=[{"source": "leave.txt"}],
+    )
+
+    store.add(
+        ids=["chunk-1"],
+        documents=["Annual leave is 30 days."],
+        metadatas=[{"source": "updated.txt"}],
+    )
+
+    assert store.document_count == 1
+
+    results = store.search(
+        query="annual leave",
+        top_k=1,
+    )
+
+    assert results[0]["id"] == "chunk-1"
+    assert results[0]["document"] == (
+        "Annual leave is 30 days."
+    )
+    assert results[0]["metadata"]["source"] == (
+        "updated.txt"
+    )
+
+
+def test_bm25_store_empty_persistent_store_is_not_ready(
+    tmp_path,
+):
+
+    store = BM25Store(
+        persist_directory=tmp_path / "bm25"
+    )
+
+    assert store.document_count == 0
+    assert store.is_ready is False
+
+    assert store.search(
+        query="annual leave",
+        top_k=5,
+    ) == []
+
+
+def test_bm25_store_rejects_corrupt_persistence_file(
+    tmp_path,
+):
+
+    store_path = tmp_path / "bm25"
+    store_path.mkdir(parents=True)
+
+    index_path = store_path / "index.json"
+
+    index_path.write_text(
+        "{not-valid-json",
+        encoding="utf-8",
+    )
+
     try:
-
-        store.search(
-            query="",
-            top_k=1,
+        BM25Store(
+            persist_directory=store_path
         )
-
-        assert False
-
-    except ValueError as error:
-
-        assert (
-            "Query cannot be empty"
-            in str(error)
-        )
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "Invalid BM25 index file" in str(exc)

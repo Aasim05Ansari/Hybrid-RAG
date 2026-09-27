@@ -138,9 +138,11 @@ def test_sparse_retriever_rejects_invalid_top_k():
         assert "top_k" in str(exc)
 
 
-def test_sparse_retriever_handles_empty_store():
+def test_sparse_retriever_handles_empty_store(tmp_path):
 
-    store = BM25Store()
+    store = BM25Store(
+        persist_directory=tmp_path / "bm25"
+    )
 
     retriever = SparseRetriever(
         bm25_store=store
